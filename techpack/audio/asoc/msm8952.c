@@ -396,6 +396,97 @@ static int enable_spk_ext_pa(struct snd_soc_codec *codec, int enable)
 	return 0;
 }
 
+int msm_spk_ext_pa_ctrl(struct msm_asoc_mach_data *pdatadata, bool value)
+{
+	struct msm_asoc_mach_data *pdata = pdatadata;
+	bool on_off = !value;
+	int ret = 0;
+	struct sched_param param;
+	int maxpri;
+
+	maxpri = MAX_USER_RT_PRIO - 1;
+	pr_debug("whl apk pa ctl -> high priorty start priorty = %d\n", maxpri);
+	param.sched_priority = maxpri;
+
+	if(sched_setscheduler(current, SCHED_FIFO, &param) == -1)
+	{
+		pr_debug("whl sched_setscheduler failed\n");
+	}
+	pr_debug("whl apk pa ctl -> high priorty end\n");
+
+	pr_debug("%s, pa_is_on=%d, spk_ext_pa_gpio_lc=%d, on_off=%d\n", __func__, pdata->pa_is_on, pdata->spk_ext_pa_gpio_lc, on_off);
+	if (gpio_is_valid(pdata->spk_ext_pa_gpio_lc))
+	{
+        ret = msm_cdc_pinctrl_select_active_state(pdata->mi2s_gpio_p[PRIM_MI2S]);
+		if (ret) {
+			pr_err("%s: gpio set cannot be de-activated %s\n",
+					__func__, "pri_i2s");
+			return ret;
+		}
+		if (on_off)
+		{
+			gpio_direction_output(pdata->spk_ext_pa_gpio_lc, 0);
+			mdelay(2);
+			pr_debug("111111 At %d In (%s), set pa\n", __LINE__, __FUNCTION__);
+			gpio_set_value(pdata->spk_ext_pa_gpio_lc, 0);
+			mdelay(2);
+			gpio_set_value(pdata->spk_ext_pa_gpio_lc, 1);
+
+			gpio_set_value(pdata->spk_ext_pa_gpio_lc, 0);
+			gpio_set_value(pdata->spk_ext_pa_gpio_lc, 1);
+			pr_debug("At %d In (%s), will delay\n", __LINE__, __FUNCTION__);
+			msleep(3);
+			printk("At %d In (%s), after open pa, spk_ext_pa_gpio_lc=%d\n", __LINE__, __FUNCTION__, gpio_get_value(pdata->spk_ext_pa_gpio_lc));
+
+		}
+		else {
+
+			gpio_set_value(pdata->spk_ext_pa_gpio_lc, 0);
+			printk("At %d In (%s), after close pa, spk_ext_pa_gpio_lc=%d\n", __LINE__, __FUNCTION__, gpio_get_value(pdata->spk_ext_pa_gpio_lc));
+		}
+	}
+	else
+	{
+		pr_debug("%s, error\n", __func__);
+		ret = -EINVAL;
+	}
+
+	return ret;
+}
+
+static void msm_spk_ext_pa_delayed(struct work_struct *work)
+{
+	struct delayed_work *dwork;
+	struct msm_asoc_mach_data *pdata;
+
+	dwork = to_delayed_work(work);
+	pdata = container_of(dwork, struct msm_asoc_mach_data, pa_gpio_work);
+	pr_debug("At %d In (%s), enter, pdata->pa_is_on=%d\n", __LINE__, __FUNCTION__, pdata->pa_is_on);
+
+	if(pdata->pa_is_on == 0)
+	{
+	pr_debug("At %d In (%s), open pa\n", __LINE__, __FUNCTION__);
+	msm_spk_ext_pa_ctrl(pdata, true);
+	pdata->pa_is_on = 2;
+	}
+}
+static void msm_hs_ext_pa_delayed(struct work_struct *work)
+{
+	struct delayed_work *dwork;
+	struct msm_asoc_mach_data *pdata;
+
+	dwork = to_delayed_work(work);
+	pdata = container_of(dwork, struct msm_asoc_mach_data, hs_gpio_work);
+	pr_debug("At %d In (%s), enter, pdata->hs_is_on=%d\n", __LINE__, __FUNCTION__, pdata->hs_is_on);
+
+	if(pdata->hs_is_on == 0)
+	{
+	pr_debug("At %d In (%s), open pa\n", __LINE__, __FUNCTION__);
+	msm_hs_ext_pa_ctrl(pdata, true);
+	pdata->hs_is_on = 2;
+	}
+}
+
 static bool msm8952_swap_gnd_mic(struct snd_soc_codec *codec, bool active)
 {
 	struct snd_soc_card *card = codec->component.card;
