@@ -16,6 +16,7 @@
 	/* already defined in msm8953-audio.dtsi */
 	qcom,msm-hs-micbias-type = "internal";
 	qcom,msm-spk-ext-pa = <&tlmm 96 0>;
+	qcom,cdc-ext-pa-gpios = <&cdc_ext_pa_gpios>;
 	qcom,audio-routing =
 		"RX_BIAS", "MCLK",
 		"SPK_RX_BIAS", "MCLK",
