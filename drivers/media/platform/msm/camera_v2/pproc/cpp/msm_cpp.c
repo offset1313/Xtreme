@@ -2904,8 +2904,10 @@ static int msm_cpp_validate_ioctl_input(unsigned int cmd, void *arg,
 	case MSM_SD_SHUTDOWN:
 	case MSM_SD_NOTIFY_FREEZE:
 	case MSM_SD_UNNOTIFY_FREEZE:
+#ifdef CONFIG_MACH_XIAOMI_C6
 	case VIDIOC_MSM_CPP_IOMMU_ATTACH:
 	case VIDIOC_MSM_CPP_IOMMU_DETACH:
+#endif
 		break;
 	default: {
 		if (ioctl_ptr == NULL) {
